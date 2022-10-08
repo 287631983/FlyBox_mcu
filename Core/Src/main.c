@@ -66,20 +66,23 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+#define ESC_BIT_0     50
+#define ESC_BIT_1     100  
+#define ESC_CMD_BUF_LEN 18 
+uint16_t ESC_CMD_MOTOR1[ESC_CMD_BUF_LEN]={0};
+uint16_t ESC_CMD_MOTOR2[ESC_CMD_BUF_LEN]={0};
+uint16_t ESC_CMD_MOTOR3[ESC_CMD_BUF_LEN]={0};
+uint16_t ESC_CMD_MOTOR4[ESC_CMD_BUF_LEN]={0};
 
+static void SendDshotPacket();
+static void prepareDshotPacket(const uint16_t elememt, uint16_t *esc_cmd);
+void DelayMs(uint32_t ms);
 /* USER CODE END 0 */
 
 /**
   * @brief  The application entry point.
   * @retval int
   */
-#define ESC_BIT_0     50
-#define ESC_BIT_1     117
-#define ESC_CMD_BUF_LEN 18
-uint16_t ESC_CMD[ESC_CMD_BUF_LEN]={0};
-void delay();
-static uint16_t prepareDshotPacket(const uint16_t value, uint8_t requestTelemetry);
-static void pwmWriteDigital(uint16_t *esc_cmd, uint16_t value);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -115,24 +118,35 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1) {
     /* USER CODE END WHILE */
-  /* USER CODE BEGIN 3 */
-    uint16_t ele = prepareDshotPacket(2000, 0);
-    pwmWriteDigital(ESC_CMD, ele);
-    delay();
+
+    /* USER CODE BEGIN 3 */
+    prepareDshotPacket(2000, ESC_CMD_MOTOR1);
+    prepareDshotPacket(1000, ESC_CMD_MOTOR2);
+    prepareDshotPacket(1500, ESC_CMD_MOTOR3);
+    prepareDshotPacket(2000, ESC_CMD_MOTOR4);
+
+    SendDshotPacket();
+
+    DelayMs(1);
     /* USER CODE BEGIN 3 */
 	}
   /* USER CODE END 3 */
 }
 
-void delay() {
-  uint64_t i = 84*1000;
-  while(i--);
+
+void DelayMs(uint32_t ms) {
+	for (;ms > 0; --ms) {
+		for (uint16_t j = 7946; j > 0; j--);
+	}
 }
 
-static uint16_t prepareDshotPacket(const uint16_t value, uint8_t requestTelemetry)
+static void prepareDshotPacket(const uint16_t elememt, uint16_t *esc_cmd)
 {
+    uint8_t requestTelemetry = 0;
+    uint16_t value = elememt;
+    value = ( (value > 2047) ? 2047 : value );
     // 油门大小为11位  所以这里先左移一位 添加上请求回传标志共12位
-    uint16_t packet = (value << 1) | (requestTelemetry ? 1 : 0);
+    uint16_t packet = (value << 1) | requestTelemetry;
  
     // 将12位数据分为3组 每组4位, 进行异或
     // compute checksum
@@ -146,40 +160,36 @@ static uint16_t prepareDshotPacket(const uint16_t value, uint8_t requestTelemetr
     csum &= 0xf;
     // append checksum 将CRC添加到后四位
     packet = (packet << 4) | csum;
-    return packet;
+
+    esc_cmd[0]  = (packet & 0x8000) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[1]  = (packet & 0x4000) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[2]  = (packet & 0x2000) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[3]  = (packet & 0x1000) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[4]  = (packet & 0x0800) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[5]  = (packet & 0x0400) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[6]  = (packet & 0x0200) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[7]  = (packet & 0x0100) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[8]  = (packet & 0x0080) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[9]  = (packet & 0x0040) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[10] = (packet & 0x0020) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[11] = (packet & 0x0010) ? ESC_BIT_1 : ESC_BIT_0; 	
+    esc_cmd[12] = (packet & 0x8) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[13] = (packet & 0x4) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[14] = (packet & 0x2) ? ESC_BIT_1 : ESC_BIT_0;
+    esc_cmd[15] = (packet & 0x1) ? ESC_BIT_1 : ESC_BIT_0;
 }
 
-
-static void pwmWriteDigital(uint16_t *esc_cmd, uint16_t value)
+static void SendDshotPacket()
 {
-	value = ( (value > 2047) ? 2047 : value );
-	value = prepareDshotPacket(value, 0);
-    esc_cmd[0]  = (value & 0x8000) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[1]  = (value & 0x4000) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[2]  = (value & 0x2000) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[3]  = (value & 0x1000) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[4]  = (value & 0x0800) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[5]  = (value & 0x0400) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[6]  = (value & 0x0200) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[7]  = (value & 0x0100) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[8]  = (value & 0x0080) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[9]  = (value & 0x0040) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[10] = (value & 0x0020) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[11] = (value & 0x0010) ? ESC_BIT_1 : ESC_BIT_0; 	
-    esc_cmd[12] = (value & 0x8) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[13] = (value & 0x4) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[14] = (value & 0x2) ? ESC_BIT_1 : ESC_BIT_0;
-    esc_cmd[15] = (value & 0x1) ? ESC_BIT_1 : ESC_BIT_0;
- 
-    HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_1,(uint32_t *)esc_cmd,ESC_CMD_BUF_LEN);
-    HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_2,(uint32_t *)esc_cmd,ESC_CMD_BUF_LEN);
-    HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_3,(uint32_t *)esc_cmd,ESC_CMD_BUF_LEN);
-    HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_4,(uint32_t *)esc_cmd,ESC_CMD_BUF_LEN);
+  HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_1,(uint32_t *)ESC_CMD_MOTOR1,ESC_CMD_BUF_LEN);
+  HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_2,(uint32_t *)ESC_CMD_MOTOR2,ESC_CMD_BUF_LEN);
+  HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_3,(uint32_t *)ESC_CMD_MOTOR3,ESC_CMD_BUF_LEN);
+  HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_4,(uint32_t *)ESC_CMD_MOTOR4,ESC_CMD_BUF_LEN);
 }
 
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-	HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_1);
   HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_2);
   HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_3);
   HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_4);
@@ -255,9 +265,9 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 7;
+  htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 166;
+  htim1.Init.Period = 133;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
