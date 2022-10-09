@@ -40,6 +40,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
 DMA_HandleTypeDef hdma_tim1_ch1;
 DMA_HandleTypeDef hdma_tim1_ch2;
 DMA_HandleTypeDef hdma_tim1_ch3;
@@ -60,94 +61,35 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-#define ESC_BIT_0     50
-#define ESC_BIT_1     100
-#define ESC_CMD_BUF_LEN 18
-uint16_t ESC_CMD_MOTOR1[ESC_CMD_BUF_LEN]={0};
-uint16_t ESC_CMD_MOTOR2[ESC_CMD_BUF_LEN]={0};
-uint16_t ESC_CMD_MOTOR3[ESC_CMD_BUF_LEN]={0};
-uint16_t ESC_CMD_MOTOR4[ESC_CMD_BUF_LEN]={0};
+#define ESC_BIT_0         50
+#define ESC_BIT_1         100
+#define ESC_CMD_BUF_LEN   18
+#define MIN_THROTTLE      48
+#define MAX_THROTTLE      2047
+uint16_t ESC_CMD_MOTOR1[ESC_CMD_BUF_LEN] = {0};
+uint16_t ESC_CMD_MOTOR2[ESC_CMD_BUF_LEN] = {0};
+uint16_t ESC_CMD_MOTOR3[ESC_CMD_BUF_LEN] = {0};
+uint16_t ESC_CMD_MOTOR4[ESC_CMD_BUF_LEN] = {0};
 
+uint8_t send_dshot_to_esc = 0;
 uint8_t key_pressed = 0;
-static void SendDshotPacket();
-static void prepareDshotPacket(const uint16_t elememt, uint16_t *esc_cmd);
-void DelayMs(uint32_t ms);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/* USER CODE END 0 */
-
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
-  SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_USART1_UART_Init();
-  MX_TIM1_Init();
-  /* USER CODE BEGIN 2 */
-  prepareDshotPacket(0, ESC_CMD_MOTOR1);
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-	while (1) {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-		if (key_pressed == 1) {
-			prepareDshotPacket(20000, ESC_CMD_MOTOR1);
-		} else if (key_pressed >= 2) {
-			prepareDshotPacket(0, ESC_CMD_MOTOR1);
-		} else if (key_pressed >= 3) {
-			key_pressed = 0;
-			prepareDshotPacket(200, ESC_CMD_MOTOR1);
-		}
-
-	    SendDshotPacket();
-
-	    DelayMs(1);
-    /* USER CODE BEGIN 3 */
-	}
-  /* USER CODE END 3 */
-}
-
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	DelayMs(50);
+	DelayUs(5000);
 	if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0)) {
 		key_pressed ++;
 	}
 }
 
-void DelayMs(uint32_t ms) {
-	for (;ms > 0; --ms) {
-		for (uint16_t j = 7946; j > 0; j--);
+void DelayUs(uint32_t us) {
+	for (;us > 0; --us) {
+		for (uint16_t j = 3; j > 0; j--);
 	}
 }
 
@@ -192,6 +134,7 @@ static void prepareDshotPacket(const uint16_t elememt, uint16_t *esc_cmd)
 
 static void SendDshotPacket()
 {
+  HAL_TIM_Base_Stop_IT(&htim2);
   HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_1,(uint32_t *)ESC_CMD_MOTOR1,ESC_CMD_BUF_LEN);
   HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_2,(uint32_t *)ESC_CMD_MOTOR2,ESC_CMD_BUF_LEN);
   HAL_TIM_PWM_Start_DMA(&htim1,TIM_CHANNEL_3,(uint32_t *)ESC_CMD_MOTOR3,ESC_CMD_BUF_LEN);
@@ -200,12 +143,76 @@ static void SendDshotPacket()
 
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-  HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_3);
-  HAL_TIM_PWM_Stop_DMA(&htim1, TIM_CHANNEL_4);
+  HAL_TIM_Base_Start_IT(&htim2);
 }
 
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+  if (htim == &htim2) {
+    send_dshot_to_esc = 1;
+  }
+}
+
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
+
+  /* USER CODE END 1 */
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_USART1_UART_Init();
+  MX_TIM1_Init();
+  MX_TIM2_Init();
+  /* USER CODE BEGIN 2 */
+  prepareDshotPacket(MIN_THROTTLE, ESC_CMD_MOTOR1);
+  HAL_TIM_Base_Start_IT(&htim2);
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+	while (1) {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+		if (key_pressed == 1) {
+			prepareDshotPacket(MAX_THROTTLE, ESC_CMD_MOTOR1);
+		} else if (key_pressed == 2) {
+      key_pressed = 0;
+			prepareDshotPacket(1046, ESC_CMD_MOTOR1);
+		}
+    if (send_dshot_to_esc) {
+      send_dshot_to_esc = 0;
+      SendDshotPacket();
+    }
+
+    /* USER CODE BEGIN 3 */
+	}
+  /* USER CODE END 3 */
+}
 
 /**
   * @brief System Clock Configuration
@@ -295,7 +302,7 @@ static void MX_TIM1_Init(void)
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
@@ -330,6 +337,58 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 2 */
   HAL_TIM_MspPostInit(&htim1);
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_SlaveConfigTypeDef sSlaveConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 0;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 1500;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_DISABLE;
+  sSlaveConfig.InputTrigger = TIM_TS_ITR0;
+  if (HAL_TIM_SlaveConfigSynchro(&htim2, &sSlaveConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
 
 }
 

@@ -75,8 +75,8 @@ all: main-build
 main-build: stm32_FF.elf secondary-outputs
 
 # Tool invocations
-stm32_FF.elf stm32_FF.map: $(OBJS) $(USER_OBJS) /home/Lin/Code/STM32CubeIDE/workspace_1.10.1/stm32_FF/STM32F401CCUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-g++ -o "stm32_FF.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/Lin/Code/STM32CubeIDE/workspace_1.10.1/stm32_FF/STM32F401CCUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="stm32_FF.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
+stm32_FF.elf stm32_FF.map: $(OBJS) $(USER_OBJS) /home/fj/Projects/STM32CubeIDE/workspace_1.10.1/stm32_FF/STM32F401CCUX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-g++ -o "stm32_FF.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"/home/fj/Projects/STM32CubeIDE/workspace_1.10.1/stm32_FF/STM32F401CCUX_FLASH.ld" --specs=nosys.specs -Wl,-Map="stm32_FF.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -lstdc++ -lsupc++ -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
