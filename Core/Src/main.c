@@ -199,15 +199,15 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		if (key_pressed == 1) {
-			prepareDshotPacket(MAX_THROTTLE, ESC_CMD_MOTOR1);
+			prepareDshotPacket(100, ESC_CMD_MOTOR1);
 		} else if (key_pressed == 2) {
-      key_pressed = 0;
-			prepareDshotPacket(1046, ESC_CMD_MOTOR1);
+			key_pressed = 0;
+			prepareDshotPacket(200, ESC_CMD_MOTOR1);
 		}
-    if (send_dshot_to_esc) {
-      send_dshot_to_esc = 0;
-      SendDshotPacket();
-    }
+		if (send_dshot_to_esc) {
+		  send_dshot_to_esc = 0;
+		  SendDshotPacket();
+		}
 
     /* USER CODE BEGIN 3 */
 	}
@@ -302,7 +302,7 @@ static void MX_TIM1_Init(void)
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCNPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
@@ -362,7 +362,8 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 1500;
+  // 定时周期510.333us
+  htim2.Init.Period = 40000;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)

@@ -1,0 +1,4 @@
+../Core/FIFO.cpp:3:6:bool FIFO::isQueueFull()	16	static
+../Core/FIFO.cpp:12:6:bool FIFO::isQueueEmpty()	16	static
+../Core/FIFO.cpp:21:6:void FIFO::pushMsg(uint8_t*, uint16_t)	32	static
+../Core/FIFO.cpp:39:6:bool FIFO::pullMsg(uint8_t&)	16	static

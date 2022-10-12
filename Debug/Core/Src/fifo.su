@@ -1,0 +1,5 @@
+../Core/Src/fifo.cpp:10:1:fifo::fifo()	16	static
+../Core/Src/fifo.cpp:15:1:fifo::~fifo()	16	static
+../Core/Src/fifo.cpp:15:1:virtual fifo::~fifo()	16	static
+../Core/Src/fifo.cpp:19:1:fifo::fifo(const fifo&)	16	static
+../Core/Src/fifo.cpp:24:1:fifo::fifo(fifo&&)	16	static
