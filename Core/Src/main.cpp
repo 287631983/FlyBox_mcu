@@ -18,7 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include "FIFO.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -75,10 +75,17 @@ uint16_t ESC_CMD_MOTOR4[ESC_CMD_BUF_LEN] = {0};
 
 uint8_t send_dshot_to_esc = 0;
 uint8_t key_pressed = 0;
+FIFO uart_fifo(512);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void DelayUs(uint32_t us) {
+	for (;us > 0; --us) {
+		for (uint16_t j = 3; j > 0; j--);
+	}
+}
+
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	DelayUs(5000);
@@ -87,11 +94,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	}
 }
 
-void DelayUs(uint32_t us) {
-	for (;us > 0; --us) {
-		for (uint16_t j = 3; j > 0; j--);
-	}
-}
 
 static void prepareDshotPacket(const uint16_t elememt, uint16_t *esc_cmd)
 {

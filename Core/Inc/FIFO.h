@@ -10,20 +10,24 @@
 
 #include <stdint.h>
 
-#define FIFO_LENGTH 512
-
+#ifdef __cplusplus
 class FIFO {
 	public:
+		FIFO(uint16_t size);
+		~FIFO();
+		void clear();
 		bool isQueueEmpty();
 		bool isQueueFull();
-		void pushMsg(uint8_t *, uint16_t);
-		bool pullMsg(uint8_t&);
+		bool push(uint8_t);
+		bool pull(uint8_t&);
 
 	private:
-		uint8_t queue[FIFO_LENGTH];
+		uint8_t* _queue = nullptr;
+		uint16_t _capacity = 0;
 		uint16_t _fifo_len = 0;
 		uint16_t _head_pos = 0;
 		uint16_t _tail_pos = 0;
 };
+#endif
 
 #endif /* FIFO_H_ */
