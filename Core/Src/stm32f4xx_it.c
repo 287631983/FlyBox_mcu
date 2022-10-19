@@ -51,7 +51,9 @@
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+extern uint8_t uart_rx_cache[256];
+extern volatile uint8_t uart_recv_len;
+extern volatile uint8_t uart_recv_flag;
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -239,8 +241,18 @@ void TIM2_IRQHandler(void)
   */
 void USART1_IRQHandler(void)
 {
+	uint32_t temp = 0;
   /* USER CODE BEGIN USART1_IRQn 0 */
-
+  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE)) {
+    __HAL_UART_CLEAR_IDLEFLAG(&huart1);
+    temp = huart1.Instance->SR;
+    temp = huart1.Instance->DR;
+    HAL_UART_DMAStop(&huart1);
+    temp = __HAL_DMA_GET_COUNTER(huart1.hdmarx);
+    uart_recv_len = sizeof(uart_rx_cache) - temp;
+    uart_recv_flag = 1;
+    HAL_UARTEx_ReceiveToIdle_DMA(&huart1,uart_rx_cache,sizeof(uart_rx_cache));
+  }
   /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */

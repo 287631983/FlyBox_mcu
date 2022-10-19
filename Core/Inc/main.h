@@ -31,7 +31,11 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#define ESC_BIT_0         50
+#define ESC_BIT_1         100
+#define ESC_CMD_BUF_LEN   18
+#define MIN_THROTTLE      48
+#define MAX_THROTTLE      2047
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -55,7 +59,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void prepareDshotPacket(const uint16_t elememt, uint16_t *esc_cmd);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "FIFO.h"
+#include "UartParse.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -63,11 +64,6 @@ static void MX_USART1_UART_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-#define ESC_BIT_0         50
-#define ESC_BIT_1         100
-#define ESC_CMD_BUF_LEN   18
-#define MIN_THROTTLE      48
-#define MAX_THROTTLE      2047
 uint16_t ESC_CMD_MOTOR1[ESC_CMD_BUF_LEN] = {0};
 uint16_t ESC_CMD_MOTOR2[ESC_CMD_BUF_LEN] = {0};
 uint16_t ESC_CMD_MOTOR3[ESC_CMD_BUF_LEN] = {0};
@@ -75,7 +71,11 @@ uint16_t ESC_CMD_MOTOR4[ESC_CMD_BUF_LEN] = {0};
 
 uint8_t send_dshot_to_esc = 0;
 uint8_t key_pressed = 0;
-FIFO uart_fifo(512);
+
+uint8_t uart_rx_cache[256] = {0};
+volatile uint8_t uart_recv_len = 0;
+volatile uint8_t uart_recv_flag = 0;
+UartParse uart_parse;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -95,7 +95,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 }
 
 
-static void prepareDshotPacket(const uint16_t elememt, uint16_t *esc_cmd)
+void prepareDshotPacket(const uint16_t elememt, uint16_t *esc_cmd)
 {
     uint8_t requestTelemetry = 0;
     uint16_t value = elememt;
@@ -191,6 +191,9 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   prepareDshotPacket(MIN_THROTTLE, ESC_CMD_MOTOR1);
+  prepareDshotPacket(MIN_THROTTLE, ESC_CMD_MOTOR2);
+  prepareDshotPacket(MIN_THROTTLE, ESC_CMD_MOTOR3);
+  prepareDshotPacket(MIN_THROTTLE, ESC_CMD_MOTOR4);
   HAL_TIM_Base_Start_IT(&htim2);
   /* USER CODE END 2 */
 
@@ -200,15 +203,18 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		if (key_pressed == 1) {
-			prepareDshotPacket(100, ESC_CMD_MOTOR1);
-		} else if (key_pressed == 2) {
-			key_pressed = 0;
-			prepareDshotPacket(200, ESC_CMD_MOTOR1);
-		}
 		if (send_dshot_to_esc) {
 		  send_dshot_to_esc = 0;
 		  SendDshotPacket();
+		}
+
+		if (uart_recv_flag == 1) {
+		  uart_recv_flag = 0;
+		  uart_parse.PushMsg(uart_rx_cache, uart_recv_len);
+		}
+
+		if (uart_parse.IfHasNewMsg()) {
+			uart_parse.ProcessOneMsg();
 		}
 
     /* USER CODE BEGIN 3 */
@@ -423,7 +429,8 @@ static void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
-
+  __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+  HAL_UART_Receive_DMA(&huart1, uart_rx_cache, sizeof(uart_rx_cache));
   /* USER CODE END USART1_Init 2 */
 
 }

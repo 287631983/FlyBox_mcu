@@ -9,6 +9,7 @@
 #define FIFO_H_
 
 #include <stdint.h>
+#include <deque>
 
 #ifdef __cplusplus
 class FIFO {

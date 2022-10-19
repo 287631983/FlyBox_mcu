@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "stdint.h": "c",
-        "main.h": "c"
+        "main.h": "c",
+        "deque": "cpp",
+        "functional": "cpp"
     }
 }
